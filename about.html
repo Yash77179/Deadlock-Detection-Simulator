@@ -5233,17 +5233,40 @@
                 const updatedCards = document.querySelectorAll('.resource-3d-card');
                 
                 updatedCards.forEach(card => {
-                    // Create safer touch handlers
+                    // Variables to track touch for determining scroll vs tap
+                    let touchStartY = 0;
+                    let touchStartX = 0;
+                    let isTouchMove = false;
+                    
+                    // Create safer touch handlers that allow scrolling
                     card.addEventListener('touchstart', function(e) {
-                        // Prevent additional browser behaviors like double-tap zoom
-                        if (e.target === this || e.target.closest('.resource-card-front') || e.target.closest('.resource-card-back')) {
-                            e.preventDefault();
+                        // Record the starting position for determining if this is a scroll
+                        touchStartY = e.touches[0].clientY;
+                        touchStartX = e.touches[0].clientX;
+                        isTouchMove = false;
+                        
+                        // Don't prevent default on touchstart to allow scrolling
+                    }, { passive: true });
+                    
+                    // Track touch movement to detect scrolling
+                    card.addEventListener('touchmove', function(e) {
+                        const touchY = e.touches[0].clientY;
+                        const touchX = e.touches[0].clientX;
+                        const deltaY = Math.abs(touchY - touchStartY);
+                        const deltaX = Math.abs(touchX - touchStartX);
+                        
+                        // If vertical movement is greater than horizontal, it's likely a scroll
+                        if (deltaY > deltaX && deltaY > 10) {
+                            isTouchMove = true;
                         }
-                    }, { passive: false });
+                        
+                        // Don't prevent default to allow scrolling
+                    }, { passive: true });
                     
                     card.addEventListener('touchend', function(e) {
-                        // Toggle flipped state on touch
-                        if (e.target === this || e.target.closest('.resource-card-front') || e.target.closest('.resource-card-back')) {
+                        // Only handle card flipping if this wasn't a scroll attempt
+                        if (!isTouchMove) {
+                            // Only prevent default for card flipping action, not for scrolling
                             e.preventDefault();
                             
                             // Debounce rapid taps
@@ -5302,12 +5325,32 @@
                     contrastToggle.style.transform = 'none';
                 }
                 
-                // Prevent any zooming behavior on double tap
+                // Prevent any zooming behavior on double tap, but allow scrolling
+                let documentTouchStartY = 0;
+                let documentIsTouchMove = false;
+                
+                document.addEventListener('touchstart', function(e) {
+                    documentTouchStartY = e.touches[0].clientY;
+                    documentIsTouchMove = false;
+                }, { passive: true });
+                
+                document.addEventListener('touchmove', function(e) {
+                    const touchY = e.touches[0].clientY;
+                    const deltaY = Math.abs(touchY - documentTouchStartY);
+                    
+                    if (deltaY > 10) {
+                        documentIsTouchMove = true;
+                    }
+                }, { passive: true });
+                
                 document.addEventListener('touchend', function(e) {
-                    const currentTime = new Date().getTime();
-                    const tapLength = currentTime - lastTapped;
-                    if (tapLength < 500 && tapLength > 0) {
-                        e.preventDefault();
+                    // Only prevent double-tap zoom if this wasn't a scroll attempt
+                    if (!documentIsTouchMove) {
+                        const currentTime = new Date().getTime();
+                        const tapLength = currentTime - lastTapped;
+                        if (tapLength < 500 && tapLength > 0) {
+                            e.preventDefault();
+                        }
                     }
                 }, { passive: false });
             }
