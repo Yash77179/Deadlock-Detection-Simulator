@@ -960,7 +960,7 @@
                 display: none;
             }
             
-            /* Fix mobile card animation stutters */
+            /* Fix mobile card animation stutters - more aggressive approach */
             .team-member-card {
                 transform: none !important;
                 -webkit-tap-highlight-color: transparent;
@@ -968,29 +968,52 @@
                 will-change: opacity;
                 backface-visibility: hidden;
                 -webkit-backface-visibility: hidden;
-                transition: opacity 0.15s ease !important;
+                transition: none !important;
+                animation: none !important;
+                pointer-events: auto;
+            }
+            
+            .team-member-card *,
+            .team-member-card *::before,
+            .team-member-card *::after {
+                animation: none !important;
+                transition: none !important;
+                transform: none !important;
             }
             
             .team-member-card:active {
                 opacity: 0.9 !important;
-                transform: none !important;
             }
             
-            .team-member-card .card-pulse,
-            .team-member-card .card-glow {
-                display: none;
-            }
-            
-            .team-member-card:active .card-pulse,
-            .team-member-card:active .card-glow {
-                display: none;
-            }
-            
-            /* Disable hover animations on mobile */
-            .team-member-card:hover .card-pulse,
-            .team-member-card:hover .card-glow {
-                opacity: 0 !important;
+            /* Completely disable all visual effects on mobile */
+            .card-pulse,
+            .card-glow,
+            .animate-ping,
+            .team-member-card::before,
+            .team-member-card::after,
+            .glass-card:before,
+            .glass-card:after,
+            .data-stream,
+            .orb {
+                display: none !important;
                 animation: none !important;
+            }
+            
+            /* Fix all animations in the entire page on mobile */
+            .circuit-pattern,
+            .binary-effect,
+            .neural-network-bg {
+                animation: none !important;
+            }
+            
+            /* Force hardware acceleration for entire card container */
+            .glass-card {
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+                perspective: 1000;
+                -webkit-perspective: 1000;
             }
         }
 
@@ -1100,6 +1123,30 @@
         [data-contrast="high"] .neural-network-bg {
             background: var(--bg-primary);
         }
+
+        /* Mobile optimizations */
+        .mobile-device .team-member-card,
+        .mobile-device .glass-card,
+        .mobile-device .binary-effect,
+        .mobile-device .neural-network-bg,
+        .mobile-device .circuit-pattern,
+        .mobile-device .orb,
+        .mobile-device .data-stream {
+            transition-property: none !important;
+            animation: none !important;
+            transform: none !important;
+        }
+        
+        /* Optimize rendering performance for touch devices */
+        [data-touch="true"] * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        [data-touch="true"] .team-member-card {
+            touch-action: manipulation;
+            -webkit-user-select: none;
+            user-select: none;
+        }
     </style>
 </head>
 <body class="min-h-screen py-8 px-4 sm:px-6 md:px-8">
@@ -1184,7 +1231,7 @@
                     <!-- Team member cards -->
                     <div class="team-member-card p-5 rounded-lg bg-opacity-10 glass-card group">
                         <div class="card-glow absolute inset-0 bg-gradient-to-r from-process-color-1 to-process-color-2 opacity-0 rounded-lg transition-opacity duration-500 group-hover:opacity-10"></div>
-                        <div class="card-pulse absolute -inset-0.5 bg-gradient-to-r from-process-color-1 to-process-color-2 rounded-lg opacity-0 group-hover:opacity-30 blur-sm group-hover:animate-pulse transition-opacity duration-300"></div>
+                        <div class="card-pulse absolute -inset-0.5 bg-gradient-to-r from-process-color-1 to-process-color-1 rounded-lg opacity-0 group-hover:opacity-30 blur-sm group-hover:animate-pulse transition-opacity duration-300"></div>
                         
                         <div class="relative z-10">
                             <div class="role-badge">
@@ -1441,39 +1488,52 @@
             if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
                 const teamCards = document.querySelectorAll('.team-member-card');
                 
+                // Disable animations completely for smoother performance
+                document.body.classList.add('mobile-device');
+                
+                // Mark the document as a touch device
+                document.documentElement.setAttribute('data-touch', 'true');
+                
                 teamCards.forEach(card => {
-                    // Prevent default touch actions that might cause glitches
+                    // Remove any transforms to prevent rendering issues
+                    card.style.transform = 'none';
+                    
+                    // Simple tap feedback without preventing scroll
                     card.addEventListener('touchstart', function(e) {
-                        // Add touch feedback class
-                        this.classList.add('touch-active');
-                        // Don't prevent default here to allow scrolling
-                    }, { passive: true });
-                    
-                    card.addEventListener('touchend', function(e) {
-                        // Remove touch feedback
-                        this.classList.remove('touch-active');
-                    }, { passive: true });
-                    
-                    // Prevent unwanted zoom/pan behaviors on double tap
-                    card.addEventListener('touchmove', function(e) {
-                        // If it's a simple tap and not a scroll, prevent default
-                        if (e.touches.length === 1 && !window.scrolling) {
+                        // Only prevent default on the card itself, not child elements
+                        if (e.target === this) {
                             e.preventDefault();
                         }
+                        this.style.opacity = '0.9';
+                    }, { passive: false });
+                    
+                    card.addEventListener('touchend', function(e) {
+                        // Only prevent default on the card itself, not child elements
+                        if (e.target === this) {
+                            e.preventDefault();
+                        }
+                        this.style.opacity = '1';
+                    }, { passive: false });
+                    
+                    // Block double-tap zoom only on the card
+                    let lastTap = 0;
+                    card.addEventListener('touchend', function(e) {
+                        const currentTime = new Date().getTime();
+                        const tapLength = currentTime - lastTap;
+                        if (tapLength < 500 && tapLength > 0) {
+                            e.preventDefault();
+                        }
+                        lastTap = currentTime;
                     }, { passive: false });
                 });
                 
-                // Track if user is scrolling
-                let scrolling = false;
-                document.addEventListener('scroll', function() {
-                    scrolling = true;
-                    clearTimeout(window.scrollTimeout);
-                    window.scrollTimeout = setTimeout(function() {
-                        scrolling = false;
-                        window.scrolling = false;
-                    }, 100);
-                }, { passive: true });
-                window.scrolling = false;
+                // Only add the meta viewport tag if not already present
+                if (!document.querySelector('meta[name="viewport"][content*="maximum-scale"]')) {
+                    const meta = document.createElement('meta');
+                    meta.name = 'viewport';
+                    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+                    document.getElementsByTagName('head')[0].appendChild(meta);
+                }
             }
         });
         
