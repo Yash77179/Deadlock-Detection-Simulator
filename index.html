@@ -1440,16 +1440,13 @@
             
             // Initial positioning - using both load and DOMContentLoaded for reliability
             window.addEventListener('DOMContentLoaded', () => {
-                // Set a delay to ensure elements are rendered
-                setTimeout(positionIndicator, 10);
-                setTimeout(positionIndicator, 100);
-                setTimeout(positionIndicator, 500);
+                // Reduce multiple repaints to a single delayed position update
+                setTimeout(positionIndicator, 300);
             });
             
             window.addEventListener('load', () => {
-                // Set a delay to ensure elements are rendered
-                setTimeout(positionIndicator, 10);
-                setTimeout(positionIndicator, 100);
+                // Single position update after load
+                setTimeout(positionIndicator, 200);
             });
             
             // Update on resize with debounce
