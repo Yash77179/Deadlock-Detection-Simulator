@@ -812,9 +812,13 @@
         }
         
         .resource-3d-card {
+            width: 100%;
             height: 220px;
             perspective: 1000px;
             cursor: pointer;
+            transform: translateZ(0); /* Force GPU acceleration */
+            -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+            touch-action: manipulation; /* Improve touch behavior */
         }
         
         .resource-card-inner {
@@ -828,7 +832,15 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         
-        .resource-3d-card:hover .resource-card-inner {
+        /* Apply flip effect on hover for desktop */
+        @media (hover: hover) {
+            .resource-3d-card:hover .resource-card-inner {
+                transform: rotateY(180deg);
+            }
+        }
+        
+        /* Handle the flipped state for mobile with a class instead of hover */
+        .resource-3d-card.flipped .resource-card-inner {
             transform: rotateY(180deg);
         }
         
@@ -2041,6 +2053,30 @@
             box-shadow: none !important;
             padding: 0 !important;
             border-radius: 0 !important;
+        }
+
+        /* Specific mobile enhancements to prevent unwanted shifting */
+        @media (max-width: 768px) {
+            .resource-3d-card {
+                transform: none !important;
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+                will-change: transform;
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+                transition: none !important;
+            }
+            
+            .resource-3d-card:active {
+                transform: none !important;
+            }
+            
+            /* Make particles smaller and less disruptive on mobile */
+            .resource-3d-card .particle {
+                width: 4px !important;
+                height: 4px !important;
+                opacity: 0.5 !important;
+            }
         }
     </style>
 </head>
@@ -3568,17 +3604,32 @@
                     }, 2000);
                 }, 7000 + Math.random() * 5000);
                 
-                // Add click effect
-                card.addEventListener('click', () => {
-                    // Create particles on click
-                    for (let i = 0; i < 5; i++) {
-                        createParticle(card);
+                // Better click/touch handling
+                card.addEventListener('click', (e) => {
+                    // Toggle flipped state for mobile devices
+                    if (window.matchMedia('(hover: none)').matches) {
+                        e.preventDefault();
+                        // Toggle the flipped class instead of relying on hover
+                        card.classList.toggle('flipped');
                     }
+                    
+                    // Create particles without disrupting layout
+                    setTimeout(() => {
+                        for (let i = 0; i < 5; i++) {
+                            createParticle(card);
+                        }
+                    }, 10);
                 });
+                
+                // Add touch events for better mobile handling
+                card.addEventListener('touchstart', () => {
+                    card.style.transform = 'translateZ(0)'; // Prevent zoom issues
+                }, { passive: true });
             });
             
             function createParticle(parent) {
                 const particle = document.createElement('div');
+                particle.className = 'particle';
                 particle.style.cssText = `
                     position: absolute;
                     width: 8px;
