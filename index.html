@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deadlock Detection Simulator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        },
+                        neutral: {
+                            50: '#f9fafb',
+                            100: '#f3f4f6',
+                            200: '#e5e7eb',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: '#6b7280',
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            900: '#111827',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg-primary: #f9fafb;
+            --bg-gradient-1: #eef2ff;
+            --bg-gradient-2: #e0e7ff;
+            --bg-ripple-1: rgba(224, 231, 255, 0.3);
+            --bg-ripple-2: rgba(238, 242, 255, 0.3);
+            --bg-ripple-3: rgba(199, 210, 254, 0.3);
+            --grid-color: rgba(226, 232, 240, 0.4);
+            --card-bg: rgba(255, 255, 255, 0.98);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: rgba(209, 213, 219, 0.5);
+            --process-color-1: #4f46e5;
+            --process-color-2: #818cf8;
+            --resource-color-1: #059669;
+            --resource-color-2: #34d399;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+            --panel-bg: #f3f4f6;
+            --input-bg: #ffffff;
+            --input-text: #1f2937;
+            --input-border: #d1d5db;
+            --badge-bg: #e5e7eb;
+            --badge-text: #374151;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #121212;
+            --bg-gradient-1: #1e1e24;
+            --bg-gradient-2: #1a1a2e;
+            --bg-ripple-1: rgba(91, 91, 242, 0.05);
+            --bg-ripple-2: rgba(30, 30, 46, 0.1);
+            --bg-ripple-3: rgba(26, 26, 46, 0.05);
+            --grid-color: rgba(75, 85, 99, 0.15);
+            --card-bg: rgba(28, 28, 32, 0.98);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --border-color: rgba(75, 75, 85, 0.5);
+            --process-color-1: #5b5bf2;
+            --process-color-2: #7b7bf7;
+            --resource-color-1: #10b981;
+            --resource-color-2: #34d399;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --panel-bg: #202024;
+            --input-bg: #2c2c30;
+            --input-text: #ffffff;
+            --input-border: #444450;
+            --badge-bg: #2c2c30;
+            --badge-text: #ffffff;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            background-image: 
+                linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px),
+                radial-gradient(circle at top right, var(--bg-gradient-1), transparent 60%),
+                radial-gradient(circle at bottom left, var(--bg-gradient-2), transparent 60%),
+                radial-gradient(circle at 30% 20%, var(--bg-ripple-1), transparent 25%),
+                radial-gradient(circle at 70% 60%, var(--bg-ripple-2), transparent 30%),
+                radial-gradient(circle at 40% 80%, var(--bg-ripple-3), transparent 35%);
+            background-size: 25px 25px, 25px 25px, 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
+            background-position: -0.5px -0.5px, -0.5px -0.5px, 0 0, 0 0, 0 0, 0 0, 0 0;
+            background-attachment: fixed;
+            color: var(--text-primary);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .glass-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
+        
+        input, select {
+            transition: all 0.2s ease-in-out;
+            background-color: var(--input-bg) !important;
+            color: var(--input-text) !important;
+            border-color: var(--input-border) !important;
+            border-width: 1px !important;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--process-color-1) !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+        
+        .btn {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .graph-container {
+            min-height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        /* Light theme styles */
+        [data-theme="light"] .graph-container {
+            background: linear-gradient(135deg, var(--card-bg), rgba(248, 250, 252, 0.8));
+            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Dark theme styles */
+        [data-theme="dark"] .graph-container {
+            position: relative;
+            background: linear-gradient(135deg, 
+                rgba(15, 23, 42, 0.9), 
+                rgba(30, 41, 59, 0.95)
+            );
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            box-shadow: 
+                inset 0 1px 3px rgba(148, 163, 184, 0.1),
+                0 4px 20px rgba(0, 0, 0, 0.3),
+                0 0 30px rgba(99, 102, 241, 0.15);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            overflow: hidden;
+        }
+        
+        /* Add a grid pattern for the background */
+        [data-theme="dark"] .graph-container::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        /* Add a subtle animated gradient in dark theme */
+        [data-theme="dark"] .graph-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(
+                circle at 50% 50%,
+                rgba(99, 102, 241, 0.08) 0%,
+                rgba(16, 185, 129, 0.05) 35%,
+                rgba(30, 41, 59, 0) 70%
+            );
+            background-size: 150% 150%;
+            animation: pulseGradient 8s ease infinite;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.7;
+        }
+        
+        /* Create pulsing gradient animation */
+        @keyframes pulseGradient {
+            0% { 
+                background-size: 120% 120%; 
+                background-position: 50% 50%;
+            }
+            50% { 
+                background-size: 140% 140%;
+                background-position: 51% 51%;
+            }
+            100% { 
+                background-size: 120% 120%;
+                background-position: 50% 50%;
+            }
+        }
+        
+        /* High contrast dark theme */
+        [data-contrast="high"][data-theme="dark"] .graph-container {
+            background: #000000;
+            box-shadow: 0 0 0 2px #ffffff;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
+        
+        [data-contrast="high"][data-theme="dark"] .graph-container::before,
+        [data-contrast="high"][data-theme="dark"] .graph-container::after {
+            display: none;
+        }
+        
+        /* Add the digital artifacts that appear occasionally in dark mode */
+        @keyframes glitch {
+            0% { 
+                opacity: 0;
+                transform: translateX(-20px) skewX(10deg);
+            }
+            2% { 
+                opacity: 0.2;
+                transform: translateX(20px) skewX(-10deg);
+            }
+            4% { 
+                opacity: 0.1;
+                transform: translateX(-10px) skewX(10deg);
+            }
+            6% { 
+                opacity: 0.3;
+                transform: translateX(10px) skewX(-10deg);
+            }
+            8% { 
+                opacity: 0;
+                transform: translateX(0) skewX(0);
+            }
+            100% { 
+                opacity: 0;
+            }
+        }
+        
+        /* Create glitch effect using a pseudo-element on the graph container */
+        [data-theme="dark"] .graph-container .glitch-effect {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, 
+                rgba(99, 102, 241, 0) 0%,
+                rgba(99, 102, 241, 0.1) 50%,
+                rgba(99, 102, 241, 0) 100%
+            );
+            z-index: 5;
+            pointer-events: none;
+            animation: glitch 10s infinite;
+            animation-delay: 5s;
+            opacity: 0;
+        }
+        
+        /* Enhanced graph legend styles for dark mode */
+        [data-theme="dark"] .graph-legend {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            box-shadow: 
+                0 4px 12px rgba(0, 0, 0, 0.25),
+                0 0 15px rgba(99, 102, 241, 0.15);
+            padding: 10px;
+            border-radius: 10px;
+            z-index: 20;
+        }
+        
+        [data-theme="dark"] .legend-item {
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+            margin-bottom: 6px;
+        }
+        
+        /* Enhance process and resource colors in legend */
+        [data-theme="dark"] .process-color {
+            background: linear-gradient(135deg, var(--process-color-1), var(--process-color-2));
+            border: 1px solid rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+        }
+        
+        [data-theme="dark"] .resource-color {
+            background: linear-gradient(135deg, var(--resource-color-1), var(--resource-color-2));
+            border: 1px solid rgba(16, 185, 129, 0.5);
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+        
+        /* Enhanced request and allocation lines in legend */
+        [data-theme="dark"] .request-line {
+            border-top: 2px dashed var(--process-color-2);
+            opacity: 0.9;
+        }
+        
+        [data-theme="dark"] .allocation-line {
+            background-color: var(--resource-color-2);
+            height: 2px;
+            opacity: 0.9;
+        }
+        
+        /* High contrast modes */
+        [data-contrast="high"][data-theme="dark"] .graph-legend {
+            background: #000000;
+            border: 2px solid #ffffff;
+            box-shadow: none;
+        }
+        
+        .graph-legend {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 8px;
+            font-size: 12px;
+            border: 1px solid var(--border-color);
+            z-index: 10;
+            box-shadow: 0 2px 5px var(--shadow-color);
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            margin-right: 6px;
+            border-radius: 3px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .process-color {
+            background: linear-gradient(to bottom, var(--process-color-1), var(--process-color-2));
+        }
+        
+        .resource-color {
+            background: linear-gradient(to bottom, var(--resource-color-1), var(--resource-color-2));
+        }
+        
+        .request-line {
+            width: 14px;
+            height: 2px;
+            border-top: 2px dashed var(--process-color-1);
+            margin-right: 6px;
+            margin-top: 6px;
+        }
+        
+        .allocation-line {
+            width: 14px;
+            height: 2px;
+            background-color: var(--resource-color-1);
+            margin-right: 6px;
+            margin-top: 6px;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .pulse {
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            box-shadow: 0 2px 10px var(--shadow-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            color: var(--text-primary);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        [data-theme="dark"] .dark-icon {
+            display: none;
+        }
+
+        [data-theme="dark"] .light-icon {
+            display: block;
+        }
+
+        .dark-icon {
+            display: block;
+        }
+
+        .light-icon {
+            display: none;
+        }
+
+        .bg-neutral-50 {
+            background-color: var(--panel-bg) !important;
+        }
+
+        .border-neutral-200 {
+            border-color: var(--border-color) !important;
+        }
+
+        .text-neutral-800 {
+            color: var(--text-primary) !important;
+        }
+        
+        h1.text-neutral-800, 
+        h2.text-neutral-800,
+        .text-neutral-700, 
+        .text-neutral-600 {
+            color: var(--text-primary) !important;
+        }
+
+        .text-neutral-500 {
+            color: var(--text-secondary) !important;
+        }
+
+        /* Update selection borders for dark mode */
+        .form-group select,
+        .form-group input {
+            background-color: var(--input-bg) !important;
+            color: var(--input-text) !important;
+            border-color: var(--input-border) !important;
+        }
+        
+        @media (max-width: 768px) {
+            .form-group {
+                flex-direction: column;
+            }
+            
+            .form-group > * {
+                width: 100%;
+                margin-bottom: 0.5rem;
+            }
+            
+            .form-group > *:last-child {
+                margin-bottom: 0;
+            }
+            
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .log-entry {
+            border-left: 3px solid var(--process-color-1);
+            padding-left: 12px;
+            margin-bottom: 8px;
+            animation: fadeIn 0.3s ease-in-out;
+            color: var(--text-primary) !important;
+        }
+        
+        /* Status Log styling */
+        .status-normal {
+            border-left: 3px solid var(--process-color-1);
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background-color: rgba(99, 102, 241, 0.05);
+            border-radius: 6px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .status-success {
+            border-left: 3px solid #10b981;
+            padding: 10px 12px;
+            background-color: rgba(16, 185, 129, 0.05);
+            border-radius: 6px;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.2);
+            animation: glowGreen 2s infinite alternate ease-in-out;
+        }
+        
+        .status-warning {
+            border-left: 3px solid #f59e0b;
+            padding: 10px 12px;
+            background-color: rgba(245, 158, 11, 0.05);
+            border-radius: 6px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .status-error {
+            border-left: 3px solid #ef4444;
+            padding: 10px 12px;
+            background-color: rgba(239, 68, 68, 0.05);
+            border-radius: 6px;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+            animation: glowRed 2s infinite alternate ease-in-out;
+        }
+        
+        @keyframes glowRed {
+            0% {
+                box-shadow: 0 0 5px rgba(239, 68, 68, 0.2);
+            }
+            100% {
+                box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+            }
+        }
+        
+        @keyframes glowGreen {
+            0% {
+                box-shadow: 0 0 5px rgba(16, 185, 129, 0.2);
+            }
+            100% {
+                box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .process-item, .resource-item {
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+            color: var(--text-primary) !important;
+        }
+        
+        .process-item {
+            border-left-color: var(--process-color-1);
+        }
+        
+        .resource-item {
+            border-left-color: var(--resource-color-1);
+        }
+        
+        .process-item:hover, .resource-item:hover {
+            background-color: var(--bg-gradient-1);
+        }
+        
+        /* Badge styling */
+        .resource-item span.bg-neutral-200 {
+            background-color: var(--badge-bg) !important;
+            color: var(--badge-text) !important;
+        }
+        
+        /* Fix heading colors */
+        h1, h2, h3, h4, h5, h6 {
+            color: var(--text-primary) !important;
+        }
+        
+        /* Fix SVG icon colors */
+        svg {
+            color: var(--text-primary);
+        }
+
+        /* Add new CSS variables for high contrast mode */
+        :root {
+            --bg-primary: #f9fafb;
+            --bg-gradient-1: #eef2ff;
+            --bg-gradient-2: #e0e7ff;
+            --bg-ripple-1: rgba(224, 231, 255, 0.6);
+            --bg-ripple-2: rgba(238, 242, 255, 0.7);
+            --bg-ripple-3: rgba(199, 210, 254, 0.5);
+            --grid-color: rgba(226, 232, 240, 0.7);
+            --card-bg: rgba(255, 255, 255, 0.95);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border-color: rgba(209, 213, 219, 0.5);
+            --process-color-1: #4f46e5;
+            --process-color-2: #818cf8;
+            --resource-color-1: #059669;
+            --resource-color-2: #34d399;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+            --panel-bg: #f3f4f6;
+            --input-bg: #ffffff;
+            --input-text: #1f2937;
+            --input-border: #d1d5db;
+            --badge-bg: #e5e7eb;
+            --badge-text: #374151;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #121212;
+            --bg-gradient-1: #1e1e24;
+            --bg-gradient-2: #1a1a2e;
+            --bg-ripple-1: rgba(91, 91, 242, 0.1);
+            --bg-ripple-2: rgba(30, 30, 46, 0.3);
+            --bg-ripple-3: rgba(26, 26, 46, 0.2);
+            --grid-color: rgba(75, 85, 99, 0.2);
+            --card-bg: rgba(28, 28, 32, 0.95);
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --border-color: rgba(75, 75, 85, 0.5);
+            --process-color-1: #5b5bf2;
+            --process-color-2: #7b7bf7;
+            --resource-color-1: #10b981;
+            --resource-color-2: #34d399;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --panel-bg: #202024;
+            --input-bg: #2c2c30;
+            --input-text: #ffffff;
+            --input-border: #444450;
+            --badge-bg: #2c2c30;
+            --badge-text: #ffffff;
+        }
+
+        /* High contrast light mode */
+        [data-contrast="high"][data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-gradient-1: #ffffff;
+            --bg-gradient-2: #ffffff;
+            --bg-ripple-1: rgba(224, 231, 255, 0);
+            --bg-ripple-2: rgba(238, 242, 255, 0);
+            --bg-ripple-3: rgba(199, 210, 254, 0);
+            --grid-color: rgba(0, 0, 0, 0.1);
+            --card-bg: rgba(255, 255, 255, 1);
+            --text-primary: #000000;
+            --text-secondary: #000000;
+            --border-color: rgba(0, 0, 0, 0.2);
+            --process-color-1: #000000;
+            --process-color-2: #000000;
+            --resource-color-1: #000000;
+            --resource-color-2: #000000;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --panel-bg: #ffffff;
+            --input-bg: #ffffff;
+            --input-text: #000000;
+            --input-border: #000000;
+            --badge-bg: #ffffff;
+            --badge-text: #000000;
+        }
+
+        /* High contrast dark mode */
+        [data-contrast="high"][data-theme="dark"] {
+            --bg-primary: #000000;
+            --bg-gradient-1: #000000;
+            --bg-gradient-2: #000000;
+            --bg-ripple-1: rgba(91, 91, 242, 0);
+            --bg-ripple-2: rgba(30, 30, 46, 0);
+            --bg-ripple-3: rgba(26, 26, 46, 0);
+            --grid-color: rgba(255, 255, 255, 0.1);
+            --card-bg: rgba(0, 0, 0, 1);
+            --text-primary: #ffffff;
+            --text-secondary: #ffffff;
+            --border-color: rgba(255, 255, 255, 0.2);
+            --process-color-1: #ffffff;
+            --process-color-2: #ffffff;
+            --resource-color-1: #ffffff;
+            --resource-color-2: #ffffff;
+            --shadow-color: rgba(255, 255, 255, 0.1);
+            --panel-bg: #000000;
+            --input-bg: #000000;
+            --input-text: #ffffff;
+            --input-border: #ffffff;
+            --badge-bg: #000000;
+            --badge-text: #ffffff;
+        }
+
+        /* Style for the contrast toggle button */
+        .contrast-toggle {
+            position: fixed;
+            top: 20px;
+            right: 70px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            box-shadow: 0 2px 10px var(--shadow-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 100;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+            color: var(--text-primary) !important;
+        }
+
+        .contrast-toggle:hover {
+            transform: scale(1.1);
+        }
+
+        [data-contrast="high"] .contrast-toggle {
+            background-color: var(--text-primary);
+            color: var(--bg-primary) !important;
+        }
+        
+        [data-contrast="high"] .contrast-toggle svg {
+            fill: var(--bg-primary);
+            color: var(--bg-primary) !important;
+        }
+        
+        /* Fix SVG colors in contrast mode */
+        [data-contrast="high"] svg {
+            color: var(--text-primary) !important;
+            fill: currentColor;
+        }
+        
+        /* Ensure header text is white in dark/high contrast mode */
+        [data-theme="dark"] h1.text-neutral-800,
+        [data-contrast="high"][data-theme="dark"] h1.text-neutral-800 {
+            color: var(--text-primary) !important;
+        }
+
+        /* Enhanced Navbar Styling */
+        .enhanced-navbar {
+            position: relative;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px var(--shadow-color);
+            padding: 6px;
+            margin-top: 1.5rem;
+            display: inline-flex;
+            transition: all 0.3s ease;
+            width: auto;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .nav-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            text-align: center;
+            min-width: 130px;
+        }
+        
+        .nav-item:before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 2px;
+            background: var(--process-color-1);
+            transform: translateX(-50%);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-item:hover:before {
+            width: 80%;
+        }
+        
+        .nav-item:hover {
+            background-color: rgba(79, 70, 229, 0.08);
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(135deg, var(--process-color-1), var(--process-color-2));
+            color: white;
+        }
+        
+        .nav-item.active:before {
+            width: 0;
+        }
+        
+        .nav-item svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            color: inherit;
+        }
+        
+        /* Fix for high contrast mode to ensure icons match text color */
+        [data-contrast="high"] .nav-item svg,
+        [data-contrast="high"] .nav-item.active svg {
+            fill: currentColor;
+        }
+        
+        [data-contrast="high"][data-theme="dark"] .nav-item.active {
+            background: white;
+            color: black !important;
+        }
+        
+        [data-contrast="high"][data-theme="dark"] .nav-item.active svg {
+            fill: black;
+        }
+        
+        [data-contrast="high"][data-theme="light"] .nav-item.active {
+            background: black;
+            color: white !important;
+        }
+        
+        @media (max-width: 640px) {
+            .enhanced-navbar {
+                width: 90%;
+                padding: 6px;
+            }
+            
+            .nav-item {
+                padding: 8px 12px;
+                font-size: 0.85rem;
+            }
+            
+            .nav-item svg {
+                width: 16px;
+                height: 16px;
+            }
+        }
+
+        /* New Navbar Styles */
+        .navbar-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--card-bg);
+            border-radius: 50px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-color);
+            padding: 6px;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            overflow: hidden;
+            margin-bottom: 20px;
+            transform: translateY(0);
+            animation: navAppear 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        @keyframes navAppear {
+            0% { transform: translateY(20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        .navbar-container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px -10px rgba(0, 0, 0, 0.15);
+        }
+
+        .navbar-track {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50px;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .nav-indicator {
+            position: absolute;
+            top: 6px;
+            height: calc(100% - 12px);
+            background: linear-gradient(135deg, var(--process-color-1), var(--process-color-2));
+            border-radius: 50px;
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 1;
+            box-shadow: 0 5px 15px -5px var(--process-color-1);
+            pointer-events: none;
+        }
+
+        .nav-button {
+            position: relative;
+            padding: 12px 22px;
+            border-radius: 50px;
+            margin: 0 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            font-weight: 600;
+            transition: all 0.3s ease;
+            z-index: 3;
+            overflow: hidden;
+        }
+
+        .nav-button-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, var(--bg-ripple-1), transparent 70%);
+            opacity: 0;
+            z-index: -1;
+            transform: scale(0.5);
+            transition: all 0.4s ease;
+        }
+
+        .nav-button:hover .nav-button-background {
+            opacity: 0.6;
+            transform: scale(1.8);
+        }
+
+        .nav-button.active {
+            color: white;
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover:not(.active) .nav-icon {
+            transform: translateY(-3px) scale(1.1);
+        }
+
+        .nav-button:active:not(.active) .nav-icon {
+            transform: translateY(0) scale(0.95);
+        }
+
+        .nav-text {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover:not(.active) .nav-text {
+            transform: translateY(-2px);
+        }
+
+        .nav-button:active:not(.active) .nav-text {
+            transform: translateY(0) scale(0.95);
+        }
+
+        @media (max-width: 768px) {
+            .navbar-container {
+                width: 95%;
+                flex-direction: column;
+                border-radius: 20px;
+                padding: 8px;
+            }
+
+            .nav-button {
+                width: 100%;
+                margin: 4px 0;
+                padding: 10px;
+            }
+
+            .nav-indicator {
+                display: none;
+            }
+        }
+
+        /* Add floating particles on hover for navbar */
+        .navbar-container::before, 
+        .navbar-container::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--process-color-2);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+            filter: blur(3px);
+        }
+
+        .navbar-container::before {
+            top: -5px;
+            left: 30%;
+        }
+
+        .navbar-container::after {
+            bottom: -5px;
+            right: 30%;
+        }
+
+        .navbar-container:hover::before, 
+        .navbar-container:hover::after {
+            opacity: 0.7;
+            animation: floatParticle 3s infinite alternate;
+        }
+
+        @keyframes floatParticle {
+            0% { transform: translateY(0) translateX(0); }
+            100% { transform: translateY(-10px) translateX(10px); }
+        }
+
+        /* Ensure active button text is properly visible in all themes */
+        [data-contrast="high"][data-theme="dark"] .nav-button.active {
+            color: black !important;
+        }
+        
+        [data-contrast="high"][data-theme="light"] .nav-button.active {
+            color: white !important;
+        }
+        
+        /* Fix for high contrast mode */
+        [data-contrast="high"] .nav-button.active .nav-text {
+            color: inherit !important;
+        }
+        
+        [data-contrast="high"] .nav-button.active .nav-icon {
+            color: inherit !important;
+            fill: currentColor !important;
+        }
+
+        /* Add node selection styles with glowing effect in dark mode */
+        .cy-node-select-box {
+            border: 2px solid rgba(99, 102, 241, 0.5);
+            background-color: rgba(99, 102, 241, 0.1);
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .cy-node-select-box {
+            border: 2px solid rgba(99, 102, 241, 0.7);
+            background-color: rgba(16, 24, 39, 0.5);
+            box-shadow: 
+                0 0 10px rgba(99, 102, 241, 0.4),
+                0 0 20px rgba(99, 102, 241, 0.2),
+                inset 0 0 4px rgba(99, 102, 241, 0.3);
+            animation: pulse-glow 2s infinite alternate;
+        }
+
+        /* Create a glowing pulse animation for selected nodes */
+        @keyframes pulse-glow {
+            0% { 
+                box-shadow: 
+                    0 0 10px rgba(99, 102, 241, 0.4),
+                    0 0 20px rgba(99, 102, 241, 0.2),
+                    inset 0 0 4px rgba(99, 102, 241, 0.3);
+            }
+            100% { 
+                box-shadow: 
+                    0 0 15px rgba(99, 102, 241, 0.6),
+                    0 0 30px rgba(99, 102, 241, 0.3),
+                    inset 0 0 8px rgba(99, 102, 241, 0.4);
+            }
+        }
+
+        /* For edge handles and other selection tools */
+        .cy-edge-handle, .cy-eh-handle, .cy-selection-box {
+            border: 2px solid rgba(99, 102, 241, 0.6);
+            background-color: rgba(99, 102, 241, 0.2);
+            box-shadow: 0 0 8px rgba(99, 102, 241, 0.3);
+        }
+
+        [data-theme="dark"] .cy-edge-handle, 
+        [data-theme="dark"] .cy-eh-handle,
+        [data-theme="dark"] .cy-selection-box {
+            border: 2px solid rgba(99, 102, 241, 0.8);
+            background-color: rgba(30, 58, 138, 0.3);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+        }
+
+        /* High contrast versions */
+        [data-contrast="high"] .cy-node-select-box,
+        [data-contrast="high"] .cy-edge-handle,
+        [data-contrast="high"] .cy-eh-handle,
+        [data-contrast="high"] .cy-selection-box {
+            border: 3px solid #000000;
+            background-color: rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 0 2px #000000;
+            animation: none;
+        }
+
+        [data-contrast="high"][data-theme="dark"] .cy-node-select-box,
+        [data-contrast="high"][data-theme="dark"] .cy-edge-handle,
+        [data-contrast="high"][data-theme="dark"] .cy-eh-handle,
+        [data-contrast="high"][data-theme="dark"] .cy-selection-box {
+            border: 3px solid #ffffff;
+            background-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 2px #ffffff;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 md:px-8">
+    <!-- Theme Toggle Button -->
+    <div class="theme-toggle" id="themeToggle">
+        <!-- Sun icon for light mode -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 dark-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+        </svg>
+        <!-- Moon icon for dark mode -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 light-icon" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+        </svg>
+    </div>
+
+    <!-- Add a high contrast toggle button -->
+    <div class="contrast-toggle" id="contrastToggle" title="Toggle high contrast mode">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 2a6 6 0 110 12 6 6 0 010-12z" clip-rule="evenodd" />
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+        </svg>
+    </div>
+
+    <div class="max-w-7xl mx-auto">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-neutral-800 mb-2">Deadlock Detection Simulator</h1>
+            <p class="text-neutral-500 max-w-2xl mx-auto">Visualize and understand deadlock scenarios in real-time with this interactive simulator</p>
+            
+            <!-- Navigation Bar -->
+            <div class="flex justify-center mt-8 w-full">
+                <nav class="navbar-container">
+                    <div class="navbar-track"></div>
+                    <div class="nav-indicator"></div>
+                    <a href="index.html" class="nav-button active" data-page="simulator">
+                        <div class="nav-button-background"></div>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
+                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                        </svg>
+                        <span class="nav-text">Simulator</span>
+                    </a>
+                    <a href="about.html" class="nav-button" data-page="about">
+                        <div class="nav-button-background"></div>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="nav-text">About</span>
+                    </a>
+                    <a href="team.html" class="nav-button" data-page="team">
+                        <div class="nav-button-background"></div>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="nav-icon">
+                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+                        </svg>
+                        <span class="nav-text">Team</span>
+                    </a>
+                </nav>
+            </div>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column -->
+            <div class="space-y-6 lg:col-span-1">
+                <!-- Process Management Card -->
+                <div class="glass-card p-6">
+                    <h2 class="text-xl font-semibold text-neutral-800 mb-4 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm0-2a6 6 0 100-12 6 6 0 010 12z" clip-rule="evenodd" />
+                        </svg>
+                        Process Management
+                    </h2>
+                    <div class="form-group flex items-center gap-4 mb-5">
+                        <input type="text" id="processId" placeholder="Process ID (e.g., P1)" 
+                               class="flex-1 rounded-lg border border-neutral-300 px-4 py-2 text-sm text-neutral-700">
+                        <button onclick="addProcess()" 
+                                class="btn bg-primary-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-primary-700">
+                            Add 
+                        </button>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-medium text-neutral-600 text-sm mb-3">Active Processes</h3>
+                        <div class="bg-neutral-50 rounded-lg border border-neutral-200">
+                            <ul id="processList" class="divide-y divide-neutral-200 max-h-48 overflow-y-auto"></ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Resource Management Card -->
+                <div class="glass-card p-6">
+                    <h2 class="text-xl font-semibold text-neutral-800 mb-4 flex items-center">
+                        <!-- Resource Management icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-emerald-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z" />
+                        </svg>
+                        Resource Management
+                    </h2>
+                    <div class="form-group mb-5">
+                        <div class="grid grid-cols-12 gap-2">
+                            <input type="text" id="resourceId" placeholder="Resource ID (e.g., R1)" 
+                                   class="col-span-6 rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-700">
+                            <input type="number" id="resourceUnits" placeholder="Units" 
+                                   class="col-span-3 rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-700">
+                            <button onclick="addResource()" 
+                                    class="col-span-3 bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700">
+                                Add
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h3 class="font-medium text-neutral-600 text-sm mb-3">Available Resources</h3>
+                        <div class="bg-neutral-50 rounded-lg border border-neutral-200">
+                            <ul id="resourceList" class="divide-y divide-neutral-200 max-h-48 overflow-y-auto"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Center and Right Columns -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Resource Allocation Graph -->
+                <div class="glass-card p-6">
+                    <h2 class="text-xl font-semibold text-neutral-800 mb-4 flex items-center">
+                        <!-- Resource Allocation Graph icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5z" />
+                            <path d="M13 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2h-2z" />
+                            <path d="M5 13a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5z" />
+                            <path d="M13 13a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2z" />
+                            <path d="M8 7h4v6H8z" />
+                        </svg>
+                        Resource Allocation Graph
+                    </h2>
+                    <div id="graph" class="graph-container">
+                        <div class="glitch-effect"></div>
+                        <div class="graph-legend">
+                            <div class="legend-item">
+                                <div class="legend-color process-color"></div>
+                                <span>Process</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color resource-color"></div>
+                                <span>Resource</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="request-line"></div>
+                                <span>Request</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="allocation-line"></div>
+                                <span>Allocation</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actions Section -->
+                <div class="glass-card p-6">
+                    <h2 class="text-xl font-semibold text-neutral-800 mb-4 flex items-center">
+                        <!-- Actions icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-amber-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 3.5a1.5 1.5 0 013 0V4a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-.5a1.5 1.5 0 000 3h.5a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-.5a1.5 1.5 0 00-3 0v.5a1 1 0 01-1 1H6a1 1 0 01-1-1v-3a1 1 0 00-1-1h-.5a1.5 1.5 0 010-3H4a1 1 0 001-1V6a1 1 0 011-1h3a1 1 0 001-1v-.5z" />
+                        </svg>
+                        Actions
+                    </h2>
+                    <div class="space-y-4">
+                        <div class="form-group flex items-center gap-3">
+                            <select id="processSelect" class="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-700">
+                                <option value="" disabled selected>Select Process</option>
+                            </select>
+                            <select id="resourceSelect" class="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-700">
+                                <option value="" disabled selected>Select Resource</option>
+                            </select>
+                        </div>
+                        <div class="form-group flex items-center gap-3">
+                            <input type="number" id="units" placeholder="Units to request" 
+                                   class="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-700">
+                            <button onclick="requestResource()" 
+                                    class="btn bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700">
+                                Request
+                            </button>
+                            <button onclick="releaseResource()" 
+                                    class="btn bg-rose-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-rose-700">
+                                Release
+                            </button>
+                        </div>
+                        <button onclick="detectDeadlock()" 
+                                class="btn w-full bg-amber-600 text-white py-3 rounded-lg text-sm font-medium hover:bg-amber-700 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            Detect Deadlock
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Status Log -->
+                <div class="glass-card p-6">
+                    <h2 class="text-xl font-semibold text-neutral-800 mb-4 flex items-center">
+                        <!-- Status Log icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-neutral-600" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        Status Log
+                    </h2>
+                    <div class="bg-neutral-50 rounded-lg border border-neutral-200 p-4">
+                        <div id="statusLog" class="h-48 overflow-y-auto font-medium text-sm space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.25.0/cytoscape.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Theme and contrast toggle functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            const contrastToggle = document.getElementById('contrastToggle');
+            
+            // Check for saved theme preference or use default
+            const savedTheme = localStorage.getItem('deadlock-theme') || 'light';
+            const savedContrast = localStorage.getItem('deadlock-contrast') || 'normal';
+            
+            // Apply saved settings
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            if (savedContrast === 'high') {
+                document.documentElement.setAttribute('data-contrast', 'high');
+            }
+            
+            // Toggle theme on click
+            themeToggle.addEventListener('click', function() {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('deadlock-theme', newTheme);
+            });
+            
+            // Toggle contrast on click
+            contrastToggle.addEventListener('click', function() {
+                const currentContrast = document.documentElement.getAttribute('data-contrast');
+                const newContrast = currentContrast === 'high' ? 'normal' : 'high';
+                
+                if (newContrast === 'normal') {
+                    document.documentElement.removeAttribute('data-contrast');
+                } else {
+                    document.documentElement.setAttribute('data-contrast', newContrast);
+                }
+                
+                localStorage.setItem('deadlock-contrast', newContrast);
+            });
+            
+            // Initialize the fancy navbar
+            initNavbar();
+        });
+        
+        // Initialize the fancy navbar with indicator animations
+        function initNavbar() {
+            const navContainer = document.querySelector('.navbar-container');
+            const navButtons = document.querySelectorAll('.nav-button');
+            const navIndicator = document.querySelector('.nav-indicator');
+            
+            // Set initial indicator position
+            function positionIndicator() {
+                const activeButton = document.querySelector('.nav-button.active');
+                if (!activeButton || !navIndicator) return;
+                
+                const rect = activeButton.getBoundingClientRect();
+                const containerRect = navContainer.getBoundingClientRect();
+                
+                try {
+                    // For desktop (horizontal navbar)
+                    if (window.innerWidth > 768) {
+                        navIndicator.style.width = `${rect.width}px`;
+                        navIndicator.style.left = `${rect.left - containerRect.left}px`;
+                        navIndicator.style.top = '6px'; // Reset top position
+                        navIndicator.style.height = 'calc(100% - 12px)';
+                    } else { // For mobile (vertical navbar)
+                        navIndicator.style.width = `${rect.width}px`;
+                        navIndicator.style.height = `${rect.height}px`;
+                        navIndicator.style.top = `${rect.top - containerRect.top}px`;
+                        navIndicator.style.left = '6px';
+                    }
+                } catch (err) {
+                    // Fallback positioning method for older browsers
+                    console.warn('Using fallback positioning method for nav indicator', err);
+                    const index = Array.from(navButtons).findIndex(btn => btn.classList.contains('active'));
+                    if (index >= 0) {
+                        if (window.innerWidth > 768) {
+                            // Horizontal fallback
+                            const buttonWidth = navContainer.clientWidth / navButtons.length;
+                            navIndicator.style.width = `${buttonWidth}px`;
+                            navIndicator.style.left = `${index * buttonWidth}px`;
+                            navIndicator.style.top = '6px';
+                            navIndicator.style.height = 'calc(100% - 12px)';
+                        } else {
+                            // Vertical fallback
+                            const buttonHeight = navContainer.clientHeight / navButtons.length;
+                            navIndicator.style.height = `${buttonHeight}px`;
+                            navIndicator.style.top = `${index * buttonHeight}px`;
+                            navIndicator.style.left = '6px';
+                            navIndicator.style.width = 'calc(100% - 12px)';
+                        }
+                    }
+                }
+                
+                // Always ensure the indicator is visible
+                navIndicator.style.display = 'block';
+                navIndicator.style.opacity = '1';
+            }
+            
+            // Initial positioning - using both load and DOMContentLoaded for reliability
+            window.addEventListener('DOMContentLoaded', () => {
+                // Set a delay to ensure elements are rendered
+                setTimeout(positionIndicator, 10);
+                setTimeout(positionIndicator, 100);
+                setTimeout(positionIndicator, 500);
+            });
+            
+            window.addEventListener('load', () => {
+                // Set a delay to ensure elements are rendered
+                setTimeout(positionIndicator, 10);
+                setTimeout(positionIndicator, 100);
+            });
+            
+            // Update on resize with debounce
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(positionIndicator, 100);
+            });
+            
+            // Set up button hover effects
+            navButtons.forEach(button => {
+                button.addEventListener('mouseenter', () => {
+                    // Create ripple effect on hover
+                    button.querySelector('.nav-button-background').style.opacity = '0.6';
+                    button.querySelector('.nav-button-background').style.transform = 'scale(1.8)';
+                    
+                    // Add floating particles
+                    if (!button.classList.contains('active')) {
+                        const particle = document.createElement('div');
+                        particle.className = 'nav-particle';
+                        particle.style.cssText = `
+                            position: absolute;
+                            width: 5px;
+                            height: 5px;
+                            background: var(--process-color-2);
+                            border-radius: 50%;
+                            filter: blur(2px);
+                            opacity: 0.7;
+                            top: ${Math.random() * 100}%;
+                            left: ${Math.random() * 100}%;
+                            pointer-events: none;
+                            z-index: 3;
+                        `;
+                        button.appendChild(particle);
+                        
+                        // Animate particle
+                        const animation = particle.animate([
+                            { transform: 'translateY(0) translateX(0)', opacity: 0.7 },
+                            { transform: `translateY(-${20 + Math.random() * 30}px) translateX(${Math.random() * 20 - 10}px)`, opacity: 0 }
+                        ], {
+                            duration: 1000 + Math.random() * 1000,
+                            easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)',
+                        });
+                        
+                        animation.onfinish = () => {
+                            particle.remove();
+                        };
+                    }
+                });
+                
+                button.addEventListener('mouseleave', () => {
+                    button.querySelector('.nav-button-background').style.opacity = '0';
+                    button.querySelector('.nav-button-background').style.transform = 'scale(0.5)';
+                });
+                
+                // Create glow pulse effect for active button
+                if (button.classList.contains('active')) {
+                    // Pulse glow effect
+                    setInterval(() => {
+                        if (button.classList.contains('active')) {
+                            const glow = document.createElement('div');
+                            glow.className = 'active-glow';
+                            glow.style.cssText = `
+                                position: absolute;
+                                top: 0;
+                                left: 0;
+                                width: 100%;
+                                height: 100%;
+                                border-radius: 50px;
+                                background: var(--process-color-1);
+                                opacity: 0.2;
+                                z-index: 0;
+                                pointer-events: none;
+                            `;
+                            button.appendChild(glow);
+                            
+                            const animation = glow.animate([
+                                { transform: 'scale(0.9)', opacity: 0.3 },
+                                { transform: 'scale(1.05)', opacity: 0 }
+                            ], {
+                                duration: 2000,
+                                easing: 'ease-out'
+                            });
+                            
+                            animation.onfinish = () => {
+                                glow.remove();
+                            };
+                        }
+                    }, 3000);
+                }
+            });
+            
+            // Call positionIndicator immediately
+            positionIndicator();
+        }
+    </script>
+</body>
+</html> 
