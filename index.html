@@ -1126,6 +1126,35 @@
             background-color: rgba(255, 255, 255, 0.1);
             box-shadow: 0 0 0 2px #ffffff;
         }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            body, button, a, div, span, h1, h2, h3, h4, h5, h6, p {
+                user-select: none;
+            }
+            
+            /* Disable transitions and animations on mobile */
+            * {
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+            }
+            
+            /* Theme and contrast toggles positioning for mobile */
+            .theme-toggle, .contrast-toggle {
+                position: fixed !important;
+                bottom: 20px !important;
+                top: auto !important; 
+                z-index: 1000 !important;
+            }
+            
+            .theme-toggle {
+                right: 20px !important;
+            }
+            
+            .contrast-toggle {
+                right: 70px !important;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen py-8 px-4 sm:px-6 md:px-8">
@@ -1578,6 +1607,53 @@
                 }
             `;
             document.head.appendChild(style);
+        });
+
+        // Failsafe for device detection and toggle positioning
+        document.addEventListener('DOMContentLoaded', function() {
+            // Detect touch device
+            function isTouchDevice() {
+                return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+            }
+            
+            // Mark as touch device if needed
+            if (isTouchDevice()) {
+                document.body.setAttribute('data-touch', 'true');
+                document.body.classList.add('mobile-device');
+                
+                // Update hint text for mobile
+                const hintElements = document.querySelectorAll('.hover-hint, [data-hint]');
+                hintElements.forEach(el => {
+                    if (el.textContent.includes('hover')) {
+                        el.textContent = el.textContent.replace('hover', 'tap');
+                    }
+                    
+                    // Also update data-hint attribute if present
+                    if (el.hasAttribute('data-hint')) {
+                        el.setAttribute('data-hint', el.getAttribute('data-hint').replace('hover', 'tap'));
+                    }
+                });
+                
+                // Ensure toggles are correctly positioned
+                const themeToggle = document.querySelector('.theme-toggle');
+                const contrastToggle = document.querySelector('.contrast-toggle');
+                
+                if (themeToggle) {
+                    themeToggle.style.position = 'fixed';
+                    themeToggle.style.bottom = '20px';
+                    themeToggle.style.right = '20px';
+                    themeToggle.style.top = 'auto';
+                    themeToggle.style.zIndex = '1000';
+                }
+                
+                if (contrastToggle) {
+                    contrastToggle.style.position = 'fixed';
+                    contrastToggle.style.bottom = '20px';
+                    contrastToggle.style.right = '70px';
+                    contrastToggle.style.top = 'auto';
+                    contrastToggle.style.zIndex = '1000';
+                }
+            }
         });
     </script>
 </body>

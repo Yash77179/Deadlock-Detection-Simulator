@@ -1125,6 +1125,13 @@
         }
 
         /* Mobile optimizations */
+        .mobile-device * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            user-select: none;
+        }
+        
+        /* Mobile animations and transformations */
         .mobile-device .team-member-card,
         .mobile-device .glass-card,
         .mobile-device .binary-effect,
@@ -1146,6 +1153,31 @@
             touch-action: manipulation;
             -webkit-user-select: none;
             user-select: none;
+        }
+        
+        /* Better positioning for theme and contrast toggles on mobile */
+        @media (max-width: 768px) {
+            .theme-toggle,
+            .contrast-toggle {
+                position: fixed !important;
+                z-index: 1000 !important;
+                transform: none !important;
+                top: auto !important;
+                bottom: 20px !important;
+            }
+            
+            .theme-toggle {
+                right: 20px !important;
+            }
+            
+            .contrast-toggle {
+                right: 70px !important;
+            }
+            
+            /* Add some space at the bottom of the page to account for the fixed icons */
+            body {
+                padding-bottom: 70px !important;
+            }
         }
     </style>
 </head>
@@ -1732,6 +1764,55 @@
                 }
             `;
             document.head.appendChild(style);
+        });
+    </script>
+    
+    <!-- Failsafe for device detection and hint text -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Detect touch device
+            function isTouchDevice() {
+                return ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0);
+            }
+            
+            // Mark as touch device if needed
+            if (isTouchDevice()) {
+                document.body.setAttribute('data-touch', 'true');
+                document.body.classList.add('mobile-device');
+                
+                // Update hint text for mobile
+                const hintElements = document.querySelectorAll('.hover-hint, [data-hint]');
+                hintElements.forEach(el => {
+                    if (el.textContent.includes('hover')) {
+                        el.textContent = el.textContent.replace('hover', 'tap');
+                    }
+                    
+                    // Also update data-hint attribute if present
+                    if (el.hasAttribute('data-hint')) {
+                        el.setAttribute('data-hint', el.getAttribute('data-hint').replace('hover', 'tap'));
+                    }
+                });
+                
+                // Ensure toggles are correctly positioned
+                const themeToggle = document.querySelector('.theme-toggle');
+                const contrastToggle = document.querySelector('.contrast-toggle');
+                
+                if (themeToggle) {
+                    themeToggle.style.position = 'fixed';
+                    themeToggle.style.bottom = '20px';
+                    themeToggle.style.right = '20px';
+                    themeToggle.style.top = 'auto';
+                    themeToggle.style.zIndex = '1000';
+                }
+                
+                if (contrastToggle) {
+                    contrastToggle.style.position = 'fixed';
+                    contrastToggle.style.bottom = '20px';
+                    contrastToggle.style.right = '70px';
+                    contrastToggle.style.top = 'auto';
+                    contrastToggle.style.zIndex = '1000';
+                }
+            }
         });
     </script>
 </body>
