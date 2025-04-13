@@ -3241,71 +3241,109 @@
             const navButtons = document.querySelectorAll('.nav-button');
             const navIndicator = document.querySelector('.nav-indicator');
             
+            // Track screen size to prevent unnecessary updates
+            let lastWidth = window.innerWidth;
+            let isPositioning = false;
+            
             // Set initial indicator position
             function positionIndicator() {
+                // Prevent concurrent positioning operations
+                if (isPositioning) return;
+                isPositioning = true;
+                
                 const activeButton = document.querySelector('.nav-button.active');
-                if (!activeButton || !navIndicator) return;
-                
-                const rect = activeButton.getBoundingClientRect();
-                const containerRect = navContainer.getBoundingClientRect();
-                
-                try {
-                    // For desktop (horizontal navbar)
-                    if (window.innerWidth > 768) {
-                        navIndicator.style.width = `${rect.width}px`;
-                        navIndicator.style.left = `${rect.left - containerRect.left}px`;
-                        navIndicator.style.top = '6px'; // Reset top position
-                        navIndicator.style.height = 'calc(100% - 12px)';
-                    } else { // For mobile (vertical navbar)
-                        navIndicator.style.width = `${rect.width}px`;
-                        navIndicator.style.height = `${rect.height}px`;
-                        navIndicator.style.top = `${rect.top - containerRect.top}px`;
-                        navIndicator.style.left = '6px';
-                    }
-                } catch (err) {
-                    // Fallback positioning method for older browsers
-                    console.warn('Using fallback positioning method for nav indicator', err);
-                    const index = Array.from(navButtons).findIndex(btn => btn.classList.contains('active'));
-                    if (index >= 0) {
-                        if (window.innerWidth > 768) {
-                            // Horizontal fallback
-                            const buttonWidth = navContainer.clientWidth / navButtons.length;
-                            navIndicator.style.width = `${buttonWidth}px`;
-                            navIndicator.style.left = `${index * buttonWidth}px`;
-                            navIndicator.style.top = '6px';
-                            navIndicator.style.height = 'calc(100% - 12px)';
-                        } else {
-                            // Vertical fallback
-                            const buttonHeight = navContainer.clientHeight / navButtons.length;
-                            navIndicator.style.height = `${buttonHeight}px`;
-                            navIndicator.style.top = `${index * buttonHeight}px`;
-                            navIndicator.style.left = '6px';
-                            navIndicator.style.width = 'calc(100% - 12px)';
-                        }
-                    }
+                if (!activeButton || !navIndicator) {
+                    isPositioning = false;
+                    return;
                 }
                 
-                // Always ensure the indicator is visible
-                navIndicator.style.display = 'block';
-                navIndicator.style.opacity = '1';
+                // Force a single, stable calculation
+                const isMobile = window.innerWidth <= 768;
+                
+                try {
+                    const rect = activeButton.getBoundingClientRect();
+                    const containerRect = navContainer.getBoundingClientRect();
+                    
+                    // Batch all style changes together to prevent multiple reflows
+                    requestAnimationFrame(() => {
+                        if (isMobile) {
+                            // Mobile layout (vertical)
+                            navIndicator.style.cssText = `
+                                display: block;
+                                opacity: 1;
+                                width: ${rect.width}px;
+                                height: ${rect.height}px;
+                                top: ${rect.top - containerRect.top}px;
+                                left: 6px;
+                            `;
+                        } else {
+                            // Desktop layout (horizontal)
+                            navIndicator.style.cssText = `
+                                display: block;
+                                opacity: 1;
+                                width: ${rect.width}px;
+                                height: calc(100% - 12px);
+                                left: ${rect.left - containerRect.left}px;
+                                top: 6px;
+                            `;
+                        }
+                        isPositioning = false;
+                    });
+                } catch (err) {
+                    console.warn('Error positioning nav indicator:', err);
+                    
+                    // Use a more stable fallback method
+                    requestAnimationFrame(() => {
+                        const index = Array.from(navButtons).findIndex(btn => btn.classList.contains('active'));
+                        if (index >= 0) {
+                            if (!isMobile) {
+                                // Horizontal fallback
+                                const buttonWidth = navContainer.clientWidth / navButtons.length;
+                                navIndicator.style.cssText = `
+                                    display: block;
+                                    opacity: 1;
+                                    width: ${buttonWidth}px;
+                                    height: calc(100% - 12px);
+                                    left: ${index * buttonWidth}px;
+                                    top: 6px;
+                                `;
+                            } else {
+                                // Vertical fallback
+                                const buttonHeight = navContainer.clientHeight / navButtons.length;
+                                navIndicator.style.cssText = `
+                                    display: block;
+                                    opacity: 1;
+                                    height: ${buttonHeight}px;
+                                    width: calc(100% - 12px);
+                                    top: ${index * buttonHeight}px;
+                                    left: 6px;
+                                `;
+                            }
+                        }
+                        isPositioning = false;
+                    });
+                }
             }
             
-            // Initial positioning - using both load and DOMContentLoaded for reliability
+            // Initial positioning - only once after DOMContentLoaded
             window.addEventListener('DOMContentLoaded', () => {
-                // Reduce multiple repaints to a single delayed position update
                 setTimeout(positionIndicator, 300);
             });
             
+            // Position after page is fully loaded
             window.addEventListener('load', () => {
-                // Single position update after load
                 setTimeout(positionIndicator, 200);
             });
             
-            // Update on resize with debounce
+            // Update on resize with debounce and threshold check
             let resizeTimer;
             window.addEventListener('resize', () => {
-                clearTimeout(resizeTimer);
-                resizeTimer = setTimeout(positionIndicator, 100);
+                // Only trigger if width changed by at least 5px to avoid subtle height changes
+                if (Math.abs(lastWidth - window.innerWidth) > 5) {
+                    lastWidth = window.innerWidth;
+                    clearTimeout(resizeTimer);
+                    resizeTimer = setTimeout(positionIndicator, 200);
+                }
             });
             
             // Set up button hover effects
