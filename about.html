@@ -2280,37 +2280,167 @@
             -webkit-tap-highlight-color: transparent;
             touch-action: manipulation;
         }
-        
-        /* Change hint text based on device capabilities */
-        @media (hover: none) {
-            .card-hover-hint {
-                content: "Tap for details" !important;
-            }
+
+        .tutorial-illustration {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+            margin-bottom: 16px;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
-        
-        /* Fix for reusable resource card to match other cards */
-        .mobile-device .resource-3d-card[data-resource-type="reusable"] {
-            position: relative !important;
-            overflow: hidden !important;
+
+        /* Added container class for better layout control */
+        .tutorial-illustration-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
         }
-        
-        /* Change card hint text based on device */
-        @media (hover: none), (pointer: coarse) {
-            .card-hover-hint::before {
-                content: "Tap for details";
-                display: block;
-                position: absolute;
-                top: 0;
-                left: 0;
+
+        .process-bubble, .resource-bubble {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Add mobile-specific styles */
+        @media (max-width: 768px) {
+            .tutorial-illustration-container {
                 width: 100%;
-                height: 100%;
-                background: inherit;
+                overflow-x: auto;
+                padding: 0 10px;
             }
             
-            .card-hover-hint {
-                color: transparent !important;
-                position: relative;
+            .tutorial-illustration {
+                min-width: 280px;
+                height: 120px;
+                justify-content: center;
+                align-items: center;
+                margin: 0 auto 16px auto;
             }
+            
+            /* Create a grid layout for step2 illustration */
+            #step2-illustration {
+                display: grid;
+                grid-template-columns: auto 60px auto;
+                grid-template-areas: "process arrow resource";
+                align-items: center;
+                justify-items: center;
+                width: 90%;
+                margin: 0 auto;
+            }
+            
+            #step2-illustration .process-bubble {
+                grid-area: process;
+                margin: 0;
+            }
+            
+            #step2-illustration .resource-bubble {
+                grid-area: resource;
+                margin: 0;
+            }
+            
+            #step2-illustration .allocation-arrow {
+                grid-area: arrow;
+                position: relative;
+                width: 60px;
+                top: 0;
+            }
+            
+            #step2-illustration .arrow-label {
+                bottom: -25px;
+            }
+            
+            .process-bubble, .resource-bubble {
+                width: 45px;
+                height: 45px;
+                margin: 0 15px;
+                font-size: 0.9rem;
+            }
+            
+            .allocation-arrow {
+                stroke-width: 2;
+            }
+        }
+
+        @keyframes shine {
+            0% {
+                left: -100%;
+                top: -100%;
+            }
+            100% {
+                left: 100%;
+                top: 100%;
+            }
+        }
+        
+        /* High contrast mode enhancements for particles */
+        [data-high-contrast="true"] .tutorial-illustration .process-bubble {
+            background: #000000 !important;
+            color: #FFFFFF !important;
+            border: 2px solid #FFFFFF !important;
+        }
+        
+        [data-high-contrast="true"][data-theme="dark"] .tutorial-illustration .process-bubble {
+            background: #FFFFFF !important;
+            color: #000000 !important;
+            border: 2px solid #000000 !important;
+        }
+        
+        [data-high-contrast="true"] .tutorial-illustration .resource-bubble {
+            background: #000000 !important;
+            color: #FFFFFF !important;
+            border: 2px solid #FFFFFF !important;
+        }
+        
+        [data-high-contrast="true"][data-theme="dark"] .tutorial-illustration .resource-bubble {
+            background: #FFFFFF !important;
+            color: #000000 !important;
+            border: 2px solid #000000 !important;
+        }
+        
+        [data-high-contrast="true"] .tutorial-illustration .allocation-arrow {
+            stroke: #000000 !important;
+            stroke-width: 2.5 !important;
+        }
+        
+        [data-high-contrast="true"][data-theme="dark"] .tutorial-illustration .allocation-arrow {
+            stroke: #FFFFFF !important;
+            stroke-width: 2.5 !important;
+        }
+        
+        [data-high-contrast="true"] .tutorial-illustration .arrow-label {
+            background: #000000 !important;
+            color: #FFFFFF !important;
+            border: 1px solid #FFFFFF !important;
+        }
+        
+        [data-high-contrast="true"][data-theme="dark"] .tutorial-illustration .arrow-label {
+            background: #FFFFFF !important;
+            color: #000000 !important;
+            border: 1px solid #000000 !important;
+        }
+        
+        /* Ensure the particles in the canvas are visible in high contrast mode */
+        [data-high-contrast="true"] #tutorialCanvas {
+            opacity: 0.5 !important;
+        }
+        
+        [data-high-contrast="true"][data-theme="dark"] #tutorialCanvas {
+            opacity: 0.5 !important;
         }
     </style>
 </head>
@@ -2736,8 +2866,8 @@
                                                 <li><span class="font-medium">Allocating resources</span>: Assign resource instances to processes that are currently using them</li>
                                                 <li><span class="font-medium">Making requests</span>: Indicate when a process needs a resource that's currently unavailable</li>
                                             </ul>
-                                            <div class="tutorial-illustration flex justify-center mb-3">
-                                                <div class="relative p-3 border border-dashed border-gray-300 dark:border-gray-700 rounded-lg">
+                                            <div class="tutorial-illustration-container">
+                                                <div class="tutorial-illustration" id="step2-illustration">
                                                     <div class="process-bubble">P₁</div>
                                                     <svg class="allocation-arrow" viewBox="0 0 100 20"><path d="M0,10 L90,10" /></svg>
                                                     <div class="resource-bubble">R₁</div>
@@ -5108,12 +5238,6 @@
                 // Mark the body as a mobile device to apply CSS optimizations
                 document.body.classList.add('mobile-device');
                 
-                // Update card hints to show "Tap for details" instead of "Hover for details"
-                const cardHints = document.querySelectorAll('.card-hover-hint');
-                cardHints.forEach(hint => {
-                    hint.textContent = "Tap for details";
-                });
-                
                 // Inject additional style for better card appearance
                 const styleElement = document.createElement('style');
                 styleElement.textContent = `
@@ -5458,6 +5582,84 @@
             // Only run one more time after all content has settled
             setTimeout(ensureVisibility, 1000);
         });
+    </script>
+
+    <script>
+        // Additional script to ensure tutorial illustration visibility
+        (function() {
+            function updateIllustrationStyles() {
+                const isLightTheme = document.documentElement.getAttribute('data-theme') !== 'dark';
+                const isHighContrast = document.documentElement.getAttribute('data-high-contrast') === 'true';
+                
+                // Select all tutorial illustrations
+                const illustrations = document.querySelectorAll('.tutorial-illustration');
+                illustrations.forEach(illustration => {
+                    // Process bubbles
+                    const processBubbles = illustration.querySelectorAll('.process-bubble');
+                    processBubbles.forEach(bubble => {
+                        if (isHighContrast) {
+                            bubble.style.background = isLightTheme ? '#000000' : '#ffffff';
+                            bubble.style.color = isLightTheme ? '#ffffff' : '#000000';
+                            bubble.style.border = isLightTheme ? '2px solid #ffffff' : '2px solid #000000';
+                        } else {
+                            bubble.style.background = 'linear-gradient(135deg, var(--process-color-1), var(--process-color-2))';
+                            bubble.style.color = 'white';
+                            bubble.style.border = 'none';
+                        }
+                    });
+                    
+                    // Resource bubbles
+                    const resourceBubbles = illustration.querySelectorAll('.resource-bubble');
+                    resourceBubbles.forEach(bubble => {
+                        if (isHighContrast) {
+                            bubble.style.background = isLightTheme ? '#000000' : '#ffffff';
+                            bubble.style.color = isLightTheme ? '#ffffff' : '#000000';
+                            bubble.style.border = isLightTheme ? '2px solid #ffffff' : '2px solid #000000';
+                        } else {
+                            bubble.style.background = 'linear-gradient(135deg, var(--resource-color-1), var(--resource-color-2))';
+                            bubble.style.color = 'white';
+                            bubble.style.border = 'none';
+                        }
+                    });
+                    
+                    // Allocation arrows
+                    const allocationArrows = illustration.querySelectorAll('.allocation-arrow');
+                    allocationArrows.forEach(arrow => {
+                        if (isHighContrast) {
+                            arrow.style.stroke = isLightTheme ? '#000000' : '#ffffff';
+                            arrow.style.strokeWidth = '2.5';
+                        } else {
+                            arrow.style.stroke = 'var(--primary-500)';
+                            arrow.style.strokeWidth = '1.5';
+                        }
+                    });
+                    
+                    // Arrow labels
+                    const arrowLabels = illustration.querySelectorAll('.arrow-label');
+                    arrowLabels.forEach(label => {
+                        if (isHighContrast) {
+                            label.style.background = isLightTheme ? '#000000' : '#ffffff';
+                            label.style.color = isLightTheme ? '#ffffff' : '#000000';
+                            label.style.border = isLightTheme ? '1px solid #ffffff' : '1px solid #000000';
+                        } else {
+                            label.style.background = 'var(--glass-bg)';
+                            label.style.color = 'var(--text-secondary)';
+                            label.style.border = '1px solid var(--border-color)';
+                        }
+                    });
+                });
+            }
+            
+            // Call initially
+            updateIllustrationStyles();
+            
+            // Set up event listeners
+            document.addEventListener('theme-changed', updateIllustrationStyles);
+            document.addEventListener('contrast-changed', updateIllustrationStyles);
+            
+            // Also add a slight delay to ensure styles are applied after DOM is ready
+            setTimeout(updateIllustrationStyles, 200);
+        })();
     </script>
 </body>
 </html> 
