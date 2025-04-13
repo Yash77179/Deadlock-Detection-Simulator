@@ -1112,6 +1112,66 @@
             .resource-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+            
+            /* Fix for mobile resource cards to prevent layout shifts */
+            .resource-3d-card {
+                transform: none !important;
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+                will-change: transform, opacity;
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+                transform-style: flat !important;
+                position: relative !important;
+                z-index: 1;
+                perspective: none !important;
+            }
+            
+            .resource-card-inner {
+                transition: none !important;
+                transform: none !important;
+                transform-style: flat !important;
+                backface-visibility: visible !important;
+                -webkit-backface-visibility: visible !important;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+            }
+            
+            .resource-card-front, .resource-card-back {
+                position: absolute;
+                backface-visibility: visible !important;
+                -webkit-backface-visibility: visible !important;
+            }
+            
+            .resource-card-back {
+                opacity: 0;
+                transform: none !important;
+                z-index: -1;
+            }
+            
+            /* Handle mobile taps with opacity instead of 3D transforms */
+            .resource-3d-card.flipped .resource-card-front {
+                opacity: 0;
+                z-index: -1;
+            }
+            
+            .resource-3d-card.flipped .resource-card-back {
+                opacity: 1;
+                z-index: 2;
+                transform: none !important;
+            }
+            
+            /* Prevent position shifts */
+            .theme-toggle, 
+            .contrast-toggle {
+                position: fixed !important;
+                transform: none !important;
+            }
+            
+            /* Ensure content doesn't shift when cards are tapped */
+            .resource-3d-card * {
+                transform: none !important;
+                transition: opacity 0.3s ease !important;
+            }
         }
         
         @media (max-width: 480px) {
@@ -2077,6 +2137,41 @@
                 height: 4px !important;
                 opacity: 0.5 !important;
             }
+        }
+        
+        /* High contrast mode adjustments */
+        [data-contrast="high"] .neural-network-bg {
+            background: var(--bg-primary);
+        }
+        
+        /* Mobile optimizations */
+        .mobile-device {
+            /* Disable all animations that might cause layout shifts */
+            --disable-transform: none !important;
+            --disable-animation: none !important;
+            --disable-transition: none !important;
+        }
+        
+        .mobile-device * {
+            animation-duration: 0s !important;
+            transition-duration: 0s !important;
+        }
+        
+        .mobile-device .resource-3d-card,
+        .mobile-device .glass-card,
+        .mobile-device .particle,
+        .mobile-device .flying-process,
+        .mobile-device .process-circle {
+            transform: none !important;
+            transition: none !important;
+            animation: none !important;
+            position: relative !important;
+        }
+        
+        /* Optimize rendering performance for touch devices */
+        .mobile-device * {
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
     </style>
 </head>
@@ -3591,7 +3686,7 @@
                         setTimeout(() => {
                             card.classList.remove('floating');
                             card.style.animation = '';
-                        }, 5000);
+                        },0);
                     }
                 }, 10000 + Math.random() * 5000);
                 
@@ -4287,6 +4382,9 @@
             
             // Initialize Resource Allocation Graph
             initResourceAllocationGraph();
+            
+            // Fix resource card flipping on mobile
+            initMobileResourceCards();
         });
         
         // Initialize the Resource Allocation Graph interactive visualization
@@ -4862,6 +4960,81 @@
                 
                 messageEl.textContent = "Example graph created. Try adding edges between nodes!";
             }, 500);
+        }
+        
+        // Handle resource card flipping on mobile without layout shifts
+        function initMobileResourceCards() {
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            if (isTouchDevice) {
+                // Mark the body as a mobile device to apply CSS optimizations
+                document.body.classList.add('mobile-device');
+                
+                // Get all resource cards
+                const resourceCards = document.querySelectorAll('.resource-3d-card');
+                let lastTapped = null;
+                
+                resourceCards.forEach(card => {
+                    // Remove any existing click handlers that might cause issues
+                    card.replaceWith(card.cloneNode(true));
+                    
+                    // Get the fresh reference after cloning
+                    const newCard = document.querySelector(`#${card.id}`);
+                    if (!newCard) return;
+                    
+                    // Create safer touch handlers
+                    newCard.addEventListener('touchstart', function(e) {
+                        // Prevent additional browser behaviors like double-tap zoom
+                        if (e.target === this || e.target.closest('.resource-card-front') || e.target.closest('.resource-card-back')) {
+                            e.preventDefault();
+                        }
+                    }, { passive: false });
+                    
+                    newCard.addEventListener('touchend', function(e) {
+                        // Toggle flipped state on touch
+                        if (e.target === this || e.target.closest('.resource-card-front') || e.target.closest('.resource-card-back')) {
+                            e.preventDefault();
+                            
+                            // Debounce rapid taps
+                            const now = Date.now();
+                            if (lastTapped && now - lastTapped < 300) {
+                                return;
+                            }
+                            lastTapped = now;
+                            
+                            // Toggle the flipped state
+                            this.classList.toggle('flipped');
+                            
+                            // Force layout recalculation to prevent shifts
+                            window.requestAnimationFrame(() => {
+                                document.body.style.height; // Force reflow
+                            });
+                        }
+                    }, { passive: false });
+                });
+                
+                // Fix position of theme and contrast toggles to prevent shifting
+                const themeToggle = document.getElementById('themeToggle');
+                const contrastToggle = document.getElementById('contrastToggle');
+                
+                if (themeToggle) {
+                    themeToggle.style.position = 'fixed';
+                    themeToggle.style.transform = 'none';
+                }
+                
+                if (contrastToggle) {
+                    contrastToggle.style.position = 'fixed';
+                    contrastToggle.style.transform = 'none';
+                }
+                
+                // Prevent any zooming behavior on double tap
+                document.addEventListener('touchend', function(e) {
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTapped;
+                    if (tapLength < 500 && tapLength > 0) {
+                        e.preventDefault();
+                    }
+                }, { passive: false });
+            }
         }
     </script>
     
