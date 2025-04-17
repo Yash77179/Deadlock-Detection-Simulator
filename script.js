@@ -11,6 +11,7 @@ document.documentElement.setAttribute('data-theme', currentTheme);
 document.documentElement.setAttribute('data-contrast', currentContrast);
 
 // Initialize cytoscape for graph visualization
+
 let cy = cytoscape({
     container: document.getElementById('graph'),
     boxSelectionEnabled: false,
