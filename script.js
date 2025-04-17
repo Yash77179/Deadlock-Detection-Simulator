@@ -237,6 +237,7 @@ function releaseResource() {
 }
 
 // Detect deadlock using cycle detection
+// Algo used is DFS -> recursion
 function detectDeadlock() {
     const visited = new Set();
     const recursionStack = new Set();
