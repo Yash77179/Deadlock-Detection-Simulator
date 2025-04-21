@@ -1,4 +1,5 @@
 // Data structures to store processes and resources
+
 let processes = new Set();
 let resources = new Map(); // Map of resource ID to total units
 let allocations = new Map(); // Map of process ID to Map of resource ID to allocated units
